@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # Copyright (c) Cognitect, Inc.
+# Copyright (c) 2026 Vendekagon Labs LLC.
 # All rights reserved.
 
 # Reads each transit value from stdin as it arrives and writes it back to

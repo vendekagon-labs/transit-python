@@ -47,7 +47,7 @@ root_doc = 'index'
 
 # General information about the project.
 project = 'transit'
-copyright = '2014, Cognitect'
+copyright = '2014, Cognitect; 2026, Vendekagon Labs LLC'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -267,7 +267,7 @@ texinfo_documents = [
 epub_title = 'transit-python'
 epub_author = 'Cognitect'
 epub_publisher = 'Cognitect'
-epub_copyright = '2014, Cognitect'
+epub_copyright = '2014, Cognitect; 2026, Vendekagon Labs LLC'
 
 # The basename for the epub file. It defaults to the project name.
 #epub_basename = 'transit'

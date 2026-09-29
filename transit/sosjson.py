@@ -1,4 +1,5 @@
 ## copyright 2014 cognitect. all rights reserved.
+## Copyright 2026 Vendekagon Labs LLC.
 ##
 ## licensed under the apache license, version 2.0 (the "license");
 ## you may not use this file except in compliance with the license.

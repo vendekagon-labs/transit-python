@@ -219,6 +219,8 @@ This library is open source, developed internally by Cognitect. We welcome discu
 
 ## Copyright and License
 
+Copyright © 2026 Vendekagon Labs LLC
+
 Copyright © 2014-2016 Cognitect
 
 Licensed under the Apache License, Version 2.0 (the "License");
