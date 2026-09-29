@@ -40,7 +40,7 @@ means = {}
 for jsonfile in [seattle_dir + "example.json", 
                  seattle_dir + "example.verbose.json"]:
     data = ""
-    with open(jsonfile, 'r') as fd:
+    with open(jsonfile, encoding='utf-8') as fd:
         data = fd.read()
 
     print("-"*50)

@@ -7,9 +7,9 @@
 #        (defaults: ../transit-format, 100)
 
 set -e
+FORMAT=`cd "${1:-\`dirname $0\`/../../transit-format}" && pwd`
 cd `dirname $0`/..
 HERE=`pwd`
-FORMAT=`cd "${1:-../transit-format}" && pwd`
 GEN=${2:-100}
 PROJECT=`python3 -c "import os, sys; print(os.path.relpath(sys.argv[1], os.path.dirname(sys.argv[2])))" "$HERE" "$FORMAT"`
 DEPS='{:paths ["src"] :deps {org.clojure/clojure {:mvn/version "1.12.4"} com.cognitect/transit-clj {:mvn/version "1.1.347"} org.clojure/data.generators {:mvn/version "1.1.1"} commons-codec/commons-codec {:mvn/version "1.21.0"}}}'

@@ -101,10 +101,11 @@ class ReadEachTest(unittest.TestCase):
 
 
 class RoundtripScriptTest(unittest.TestCase):
-    """bin/roundtrip is what transit-format's verify harness drives."""
+    """bin/read-write is what transit-format's verify harness drives (through
+    bin/roundtrip, a shell script; run directly, it also works on Windows)."""
 
     def roundtrip(self, protocol, data):
-        return subprocess.run([os.path.join(REPO, "bin", "roundtrip"), protocol.replace("_", "-")],
+        return subprocess.run([sys.executable, os.path.join(REPO, "bin", "read-write"), protocol.replace("_", "-")],
                               input=data, capture_output=True, check=True, timeout=30,
                               env=dict(os.environ, PATH=os.path.dirname(sys.executable)
                                        + os.pathsep + os.environ.get("PATH", ""))).stdout

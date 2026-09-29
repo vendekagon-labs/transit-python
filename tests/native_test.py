@@ -88,8 +88,10 @@ class NativeMatchesPureTest(unittest.TestCase):
             self.skipTest("transit-format exemplars not found")
         for name in names:
             for protocol, ext in FORMATS.items():
-                with open(exemplar_path(name + ext), "rb" if protocol == "msgpack" else "r") as f:
+                with open(exemplar_path(name + ext), "rb") as f:
                     data = f.read()
+                if protocol != "msgpack":
+                    data = data.decode("utf-8")
                 native_value = read(data, protocol)
                 with pure():
                     pure_value = read(data, protocol)

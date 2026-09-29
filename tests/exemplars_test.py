@@ -33,7 +33,7 @@ def exemplar(name, val):
     class ExemplarTest(ExemplarBaseTest):
 
         def test_json(self):
-            with open(exemplar_path(name + ".json")) as stream:
+            with open(exemplar_path(name + ".json"), encoding="utf-8") as stream:
                 data = Reader(protocol="json").read(stream)
                 self.assertEqual(val, data)
 
@@ -44,7 +44,7 @@ def exemplar(name, val):
                 self.assertEqual(val, data)
 
         def test_json_verbose(self):
-            with open(exemplar_path(name + ".verbose.json")) as stream:
+            with open(exemplar_path(name + ".verbose.json"), encoding="utf-8") as stream:
                 data = Reader(protocol="json_verbose").read(stream)
                 self.assertEqual(val, data)
 
