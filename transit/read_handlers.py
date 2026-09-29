@@ -31,11 +31,13 @@ _RFC3339 = re.compile(r"(\d{4}-\d\d-\d\d)[Tt ](\d\d:\d\d:\d\d)(?:\.(\d+))?"
 
 
 def parse_rfc3339(s):
-    """Parse an RFC 3339 timestamp into an aware datetime.
+    """Parse an RFC 3339 timestamp into a UTC datetime, to the millisecond
+    (transit times are points in time, with millisecond precision, as they
+    are for the other transit implementations).
 
     Normalizes what datetime.fromisoformat can't handle on every supported
     Python ("Z", fractional seconds that aren't 3 or 6 digits). A missing
-    offset is taken to be UTC, since transit dates are points in time.
+    offset is taken to be UTC.
     """
     m = _RFC3339.match(s)
     if not m:
@@ -49,7 +51,8 @@ def parse_rfc3339(s):
         d = datetime.datetime.fromisoformat(date + "T" + time + offset)
     if d.tzinfo is None:
         d = d.replace(tzinfo=datetime.timezone.utc)
-    return d
+    d = d.astimezone(datetime.timezone.utc)
+    return d.replace(microsecond=d.microsecond // 1000 * 1000)
 
 
 class DefaultHandler:

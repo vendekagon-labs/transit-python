@@ -21,6 +21,7 @@ import unittest
 from io import BytesIO
 from unittest import mock
 
+from transit import _accel
 from transit.reader import Reader
 from transit.writer import Writer
 
@@ -44,6 +45,7 @@ class OptionalMsgpackTest(unittest.TestCase):
                              capture_output=True, text=True, timeout=30)
         self.assertEqual(out.stdout.strip(), "ok", out.stderr)
 
+    @unittest.skipIf(_accel.native is not None, "the native extension reads and writes msgpack itself")
     def test_msgpack_protocol_without_msgpack(self):
         with mock.patch.dict(sys.modules, {"msgpack": None}):
             for make in (lambda: Reader("msgpack"),

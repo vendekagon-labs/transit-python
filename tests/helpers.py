@@ -35,12 +35,21 @@ def hash_of_size(n):
     return frozendict(zip(array_of_symbools(n), range(0, n+1)))
 
 
+def transit_format_dir():
+    """transit-format is expected at $TRANSIT_FORMAT_DIR, checked out next to
+    this repo, or (as CI does) inside it."""
+    if os.environ.get("TRANSIT_FORMAT_DIR"):
+        return os.environ["TRANSIT_FORMAT_DIR"]
+    repo = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
+    for d in (os.path.join(repo, os.pardir, "transit-format"), os.path.join(repo, "transit-format")):
+        if os.path.isdir(d):
+            return d
+    return os.path.join(repo, os.pardir, "transit-format")
+
+
 def exemplar_path(name):
-    """Path to a transit-format exemplar file. transit-format is expected to be
-    checked out next to this repo, or at $TRANSIT_FORMAT_DIR."""
-    root = os.environ.get("TRANSIT_FORMAT_DIR") or os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir, "transit-format")
-    return os.path.join(root, "examples", "0.8", "simple", name)
+    """Path to a transit-format exemplar file."""
+    return os.path.join(transit_format_dir(), "examples", "0.8", "simple", name)
 
 
 try:

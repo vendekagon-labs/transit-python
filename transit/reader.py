@@ -16,6 +16,7 @@
 import json
 
 from transit import sosjson
+from transit._accel import FORMATS, native
 from transit.decoder import Decoder
 from transit.helpers import require_msgpack
 
@@ -27,11 +28,19 @@ class Reader:
     the msgpack package (pip install 'transit-python[msgpack]').
     """
     def __init__(self, protocol="json"):
+        self.protocol = protocol
+        self.customized = False
         if protocol in ("json", "json_verbose"):
             self.reader = JsonUnmarshaler()
         elif protocol == "msgpack":
-            self.reader = MsgPackUnmarshaler()
-            self.unpacker = self.reader.unpacker
+            try:
+                self.reader = MsgPackUnmarshaler()
+                self.unpacker = self.reader.unpacker
+            except ImportError:
+                # the native extension reads msgpack without the package
+                if native is None:
+                    raise
+                self.reader = None
         else:
             raise ValueError("'" + protocol + "' is not a supported. " +
                              "Protocol must be:" +
@@ -42,12 +51,15 @@ class Reader:
         msgpack or json), read the data, and return the Python representation
         of the contents. One-shot reader.
         """
+        if native is not None and not self.customized:
+            return native.loads(stream.read(), FORMATS[self.protocol])
         return self.reader.load(stream)
 
     def register(self, key_or_tag, f_val):
         """Register a custom transit tag and decoder/parser function for use
         during reads.
         """
+        self.customized = True
         self.reader.decoder.register(key_or_tag, f_val)
 
     def readeach(self, stream, **kwargs):
@@ -61,8 +73,30 @@ class Reader:
         For msgpack, stream may be None, in which case the objects are taken
         from data fed to the `unpacker` property with `unpacker.feed()`.
         """
+        if native is not None and not self.customized and stream is not None:
+            yield from self._native_readeach(stream)
+            return
+        if self.reader is None:
+            require_msgpack()
         for o in self.reader.loadeach(stream):
             yield o
+
+
+    def _native_readeach(self, stream):
+        s = native.stream_new(FORMATS[self.protocol])
+        for chunk in sosjson.chunks_raw(stream):
+            native.stream_feed(s, chunk)
+            while True:
+                found, value = native.stream_read(s)
+                if not found:
+                    break
+                yield value
+        native.stream_end(s)
+        while True:
+            found, value = native.stream_read(s)
+            if not found:
+                return
+            yield value
 
 
 class JsonUnmarshaler:

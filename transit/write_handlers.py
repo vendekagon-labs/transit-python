@@ -255,6 +255,14 @@ class DateTimeHandler:
         return str(DateTimeHandler.rep(d))
 
 
+def format_rfc3339(d):
+    """d as an RFC 3339 UTC time to the millisecond, as transit-java writes it."""
+    ms = DateTimeHandler.rep(d)
+    t = DateTimeHandler.epoch + datetime.timedelta(milliseconds=ms)
+    return "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ" % (t.year, t.month, t.day, t.hour, t.minute, t.second,
+                                                     ms % 1000)
+
+
 class VerboseDateTimeHandler:
     @staticmethod
     def tag(_):
@@ -262,11 +270,11 @@ class VerboseDateTimeHandler:
 
     @staticmethod
     def rep(d):
-        return d.isoformat()
+        return format_rfc3339(d)
 
     @staticmethod
     def string_rep(d):
-        return d.isoformat()
+        return format_rfc3339(d)
 
 
 class SetHandler:

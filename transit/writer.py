@@ -21,6 +21,7 @@ from transit.rolling_cache import RollingCache
 from transit.write_handlers import WriteHandler
 from transit.transit_types import TaggedValue
 from transit.helpers import require_msgpack
+from transit._accel import FORMATS, native
 
 
 class Writer:
@@ -34,7 +35,16 @@ class Writer:
     """
     def __init__(self, io, protocol="json", opts=None):
         opts = {"cache_enabled": True} if opts is None else opts
-        if protocol == "json":
+        self.io = io
+        self.protocol = protocol
+        self.customized = False
+        self.marshaler = None
+        if protocol == "msgpack" and native is not None:
+            try:
+                self.marshaler = MsgPackMarshaler(io, opts=opts)
+            except ImportError:
+                pass   # the native extension writes msgpack without the package
+        elif protocol == "json":
             self.marshaler = JsonMarshaler(io, opts=opts)
         elif protocol == "json_verbose":
             self.marshaler = VerboseJsonMarshaler(io, opts=opts)
@@ -48,6 +58,17 @@ class Writer:
         """Given a Python object, marshal it into Transit data and write it to
         the 'io' source.
         """
+        if native is not None and not self.customized:
+            try:
+                out = native.dumps(obj, FORMATS[self.protocol])
+            except native.Unsupported:
+                pass   # a type the extension doesn't handle: pure Python
+            else:
+                self.io.write(out)
+                self.io.flush()
+                return
+        if self.marshaler is None:
+            require_msgpack()
         self.marshaler.marshal_top(obj)
 
     def register(self, obj_type, handler_class):
@@ -56,6 +77,9 @@ class Writer:
         You must specify the obj type to be encoded, and the handler class
         that should be used by the Marshaler during write-time.
         """
+        self.customized = True
+        if self.marshaler is None:
+            require_msgpack()
         self.marshaler.register(obj_type, handler_class)
 
 
@@ -90,6 +114,8 @@ class Marshaler:
     objects.  The end of this process is specialized by other Marshalers to
     covert the final result into an on-the-wire payload (JSON or MsgPack).
     """
+    native_map_keys = False
+
     def __init__(self, opts=None):
         self.opts = {} if opts is None else opts
         self._init_handlers()
@@ -185,6 +211,10 @@ class Marshaler:
         handler = self.handlers[obj]
         tag = handler.tag(obj)
         f = marshal_dispatch.get(tag)
+        if as_map_key and self.native_map_keys and tag in ("_", "?", "i", "d"):
+            # msgpack map keys can be any type: like transit-java, write
+            # nil, booleans, ints and floats as themselves
+            as_map_key = False
 
         if f:
             f(self, obj, handler.string_rep(obj) if as_map_key else handler.rep(obj), as_map_key, cache)
@@ -243,6 +273,7 @@ class MsgPackMarshaler(Marshaler):
     """The Marshaler tailor to MsgPack.  To use this Marshaler, specify the
     'msgpack' protocol when creating a Writer.
     """
+    native_map_keys = True
     MSGPACK_MAX_INT = pow(2, 63) - 1
     MSGPACK_MIN_INT = -pow(2, 63)
 
@@ -256,6 +287,11 @@ class MsgPackMarshaler(Marshaler):
         nopts = MsgPackMarshaler.default_opts.copy()
         nopts.update(opts or {})
         Marshaler.__init__(self, nopts)
+
+    def emit_cmap(self, m, _, cache):
+        # transit-java writes cmaps as ["~#cmap", [...]] in msgpack (and as
+        # {"~#cmap": [...]} in JSON)
+        self.emit_tagged("cmap", flatten_map(m), cache)
 
     def emit_array_start(self, size):
         self.packer.pack_array_header(size)

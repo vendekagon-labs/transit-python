@@ -1,0 +1,134 @@
+# Tests, then builds the sdist and wheels. Tags named v<version> (matching
+# transit.__version__) are published to PyPI, with trusted publishing: no
+# tokens, but PyPI must list this repository, this workflow file
+# (wheels.yml) and the "pypi" environment as a trusted publisher.
+name: Test, build and publish
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: tests (Python ${{ matrix.python }}, ${{ matrix.mode }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.14"]
+        mode: [native, pure, native without msgpack]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: cognitect/transit-format
+          path: transit-format
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          if [ "${{ matrix.mode }}" = "native without msgpack" ]; then
+            pip install -e . pytest
+          else
+            pip install -e '.[test]'
+          fi
+      - name: Test
+        run: |
+          if [ "${{ matrix.mode }}" = pure ]; then export TRANSIT_PUREPYTHON=1; else
+            python -c "import transit._accel as a; assert a.native is not None, 'no native extension'"; fi
+          python -W error -m pytest -v
+
+  verify:
+    name: transit-format verify harness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: transit-python
+      - uses: actions/checkout@v7
+        with:
+          repository: cognitect/transit-format
+          path: transit-format
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - name: Install the clojure CLI
+        run: |
+          curl -sSL -O https://github.com/clojure/brew-install/releases/latest/download/linux-install.sh
+          chmod +x linux-install.sh
+          sudo ./linux-install.sh
+      - run: pip install -e './transit-python[msgpack]'
+      - run: transit-python/bin/verify transit-format 200
+
+  wheels:
+    name: wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15-intel, macos-latest, windows-latest, windows-11-arm]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: cognitect/transit-format
+          path: transit-format
+      - uses: pypa/cibuildwheel@v4.2.1
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: cognitect/transit-format
+          path: transit-format
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - name: Check the tag matches the version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(python -c "import re; print(re.search(r'__version__ = \"(.+)\"', open('transit/__init__.py').read())[1])")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME doesn't match version $version"; exit 1; }
+      - run: pipx run build --sdist
+      # (run from /tmp, and with --import-mode=append, so these use the
+      # installed package rather than the transit/ source directory here)
+      - name: The sdist installs without a C compiler, as pure Python
+        run: |
+          python -m venv /tmp/nocc && CC=false /tmp/nocc/bin/pip install dist/*.tar.gz pytest msgpack
+          cd /tmp && /tmp/nocc/bin/python -c "import transit._accel as a; assert a.native is None"
+          /tmp/nocc/bin/pytest -q --import-mode=append "$GITHUB_WORKSPACE/tests"
+      - name: and with one, with the native extension
+        run: |
+          python -m venv /tmp/cc && /tmp/cc/bin/pip install dist/*.tar.gz pytest msgpack
+          cd /tmp && /tmp/cc/bin/python -c "import transit._accel as a; assert a.native is not None"
+          /tmp/cc/bin/pytest -q --import-mode=append "$GITHUB_WORKSPACE/tests"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [tests, verify, wheels, sdist]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/transit-python/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1

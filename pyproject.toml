@@ -39,3 +39,33 @@ version = { attr = "transit.__version__" }
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["*_test.py", "regression.py"]
+
+[tool.setuptools.exclude-package-data]
+transit = ["*.c"]
+
+# Wheels, built by .github/workflows/wheels.yml. The extension uses the limited
+# API, so building with the oldest supported CPython gives one cp310-abi3 wheel
+# per platform that installs on every Python from 3.10. Free-threaded CPython
+# can't use abi3, so it gets its own wheels. Anywhere else, pip installs the
+# sdist, which compiles the extension if it can and otherwise installs as pure
+# Python.
+[tool.cibuildwheel]
+build = ["cp310-*", "cp314t-*"]
+skip = ["*-win32", "*-manylinux_i686", "*-musllinux_i686"]
+test-requires = ["pytest", "msgpack"]
+# --import-mode=append: test the installed wheel, not the transit/ source
+# directory next to the tests
+test-command = [
+  "python -c \"import transit._accel as a; assert a.native is not None, 'no native extension'\"",
+  "pytest --import-mode=append {project}/tests",
+]
+
+[tool.cibuildwheel.linux]
+archs = ["auto64"]
+
+[tool.cibuildwheel.macos]
+archs = ["native"]
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
+
+[tool.cibuildwheel.windows]
+archs = ["native"]

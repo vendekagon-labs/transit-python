@@ -17,31 +17,39 @@ version of the Transit specification it supports.
 
 _NOTE: Transit is intended primarily as a wire protocol for transferring data between applications. If storing Transit data durably, readers and writers are expected to use the same version of Transit and you are responsible for migrating/transforming/re-storing that data when and if the transit format changes._
 
-## Releases and Dependency Information
-
-This version is installed from GitHub (the
-[`transit-python`](https://pypi.org/project/transit-python/) package on PyPI is
-the original Cognitect release, which supports Python 2.7 and 3.5):
+## Installation
 
 ```sh
-# JSON and JSON-verbose
-pip install "transit-python @ git+https://github.com/vendekagon-labs/transit-python.git"
+pip install transit-python             # JSON and JSON-verbose
+pip install 'transit-python[msgpack]'  # also msgpack, when running as pure Python
+```
 
-# also msgpack
+transit-python releases up to 0.8.302 support Python 2.7 and 3.5; later
+releases, from this repository, support Python 3.10 and later.
+
+The package includes a native extension, built from
+[transit-c](https://github.com/vendekagon-labs/transit-c), that reads and
+writes transit 4-15 times faster than pure Python, with identical results.
+PyPI has wheels with it compiled for Linux, macOS and Windows (x86_64 and
+ARM); elsewhere pip builds it from the source distribution if there's a C
+compiler, and otherwise installs the package as pure Python. Set
+`TRANSIT_PUREPYTHON=1` to use pure Python regardless (or, when installing
+from source, to not build the extension).
+
+The native extension reads and writes msgpack itself. Pure Python needs the
+[msgpack](https://pypi.org/project/msgpack/) package for that, installed
+with the `msgpack` extra; without it, creating a msgpack `Reader` or `Writer`
+raises an `ImportError` saying so.
+
+To install from GitHub:
+
+```sh
 pip install "transit-python[msgpack] @ git+https://github.com/vendekagon-labs/transit-python.git"
 ```
 
-To install over SSH, use `git+ssh://git@github.com/vendekagon-labs/transit-python.git`;
-to pin a version, add `@<tag or commit>` to the URL. In a `pyproject.toml` or
+(add `@<tag or commit>` to the URL to pin a version, or use
+`git+ssh://git@github.com/...` to install over SSH). In a `pyproject.toml` or
 `requirements.txt`, use the same `transit-python @ git+https://...` form.
-
-msgpack support depends on the [msgpack](https://pypi.org/project/msgpack/)
-package, which is only installed with the `msgpack` extra. Without it,
-creating a msgpack `Reader` or `Writer` raises an `ImportError` saying so.
-
-You can uninstall with:
-
- * `pip uninstall transit-python`
 
 ## Usage
 
@@ -171,7 +179,7 @@ integer will fail.
 
 The tests read the exemplar files from
 [transit-format](http://github.com/cognitect/transit-format), which is
-expected to be checked out next to transit-python (or set
+expected to be checked out next to transit-python (or inside it, or set
 `TRANSIT_FORMAT_DIR` to its location).
 
 ```sh
@@ -204,19 +212,33 @@ bin/verify -impls python
 python -m tests.seattle_benchmark
 ```
 
-### Build
+### The native extension
+
+`transit/_native.c` wraps transit-c, whose sources are in `csrc/`, copied
+from [transit-c](https://github.com/vendekagon-labs/transit-c) by
+`bin/sync-transit-c` (which records the commit in `csrc/transit_c_version.h`);
+change them there, not here. `pip install -e .` builds the extension in place.
+The tests check that native and pure Python read and write identically;
+run them both ways (`TRANSIT_PUREPYTHON=1 pytest` for pure Python).
+
+`bin/verify` runs transit-format's verify harness in each encoding, with the
+[clojure CLI](https://clojure.org/guides/install_clojure), and fails if any
+roundtrip does.
+
+### Releasing
+
+The version is 0.8.<number of commits>. To release:
 
 ```sh
-pip wheel --no-deps .
+bin/make-release    # stamps the version into transit/__init__.py
+git commit -am "Release 0.8.N"
+git tag v0.8.N
+git push origin main v0.8.N
 ```
 
-The version number is based on the number of commits; `bin/make-release`
-stamps it into `transit/__init__.py`. The command below shows what version
-number will be applied.
-
-```sh
-bin/revision
-```
+Pushing the tag runs `.github/workflows/wheels.yml`, which tests, builds the
+sdist and wheels (with [cibuildwheel](https://cibuildwheel.pypa.io)), and
+publishes them to PyPI with trusted publishing.
 
 
 ## Contributing
