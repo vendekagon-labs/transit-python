@@ -11,14 +11,10 @@
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
-from transit import pyversion
-Mapping = pyversion.abc.Mapping
-Hashable = pyversion.abc.Hashable
-
-from transit.pyversion import string_types, unicode_f, unicode_type
+from collections.abc import Hashable, Mapping
 
 
-class Named(object):
+class Named:
     def _parse(self):
         p = self.str.split('/', 1)
         if len(p) == 1:
@@ -41,7 +37,7 @@ class Named(object):
 
 class Keyword(Named):
     def __init__(self, value):
-        assert isinstance(value, string_types)
+        assert isinstance(value, str)
         self.str = value
         self.hv = value.__hash__()
 
@@ -66,7 +62,7 @@ class Keyword(Named):
 
 class Symbol(Named):
     def __init__(self, value):
-        assert isinstance(value, string_types)
+        assert isinstance(value, str)
         self.str = value
         self.hv = value.__hash__()
 
@@ -91,7 +87,7 @@ class Symbol(Named):
 kw_cache = {}
 
 
-class _KWS(object):
+class _KWS:
     def __getattr__(self, item):
         value = self(item)
         setattr(self, item, value)
@@ -107,7 +103,7 @@ class _KWS(object):
 kws = _KWS()
 
 
-class TaggedValue(object):
+class TaggedValue:
     def __init__(self, tag, rep):
         self.tag = tag
         self.rep = rep
@@ -123,7 +119,7 @@ class TaggedValue(object):
 
     def __hash__(self):
         if isinstance(self.rep, list):
-            return reduce(lambda a, b: hash(a) ^ hash(b), self.rep, 0)
+            return hash(tuple(self.rep))
         return hash(self.rep)
 
     def __str__(self):
@@ -160,8 +156,7 @@ class List(TaggedValue):
 
 class URI(TaggedValue):
     def __init__(self, rep):
-        # works p3 TaggedValue.__init__(self, "uri", (unicode(rep)))
-        TaggedValue.__init__(self, "uri", (rep))
+        TaggedValue.__init__(self, "uri", rep)
 
 
 class frozendict(Mapping, Hashable):
@@ -184,17 +179,17 @@ class frozendict(Mapping, Hashable):
         return 'frozendict(%r)' % (self._dict,)
 
 
-class Link(object):
+class Link:
     # Class property constants for rendering types
-    LINK = u"link"
-    IMAGE = u"image"
+    LINK = "link"
+    IMAGE = "image"
 
     # Class property constants for keywords/obj properties.
-    HREF = u"href"
-    REL = u"rel"
-    PROMPT = u"prompt"
-    NAME = u"name"
-    RENDER = u"render"
+    HREF = "href"
+    REL = "rel"
+    PROMPT = "prompt"
+    NAME = "name"
+    RENDER = "render"
 
     def __init__(self, href=None, rel=None, name=None, render=None,
                  prompt=None):
@@ -243,7 +238,7 @@ class Link(object):
         return [self.href, self.rel, self.name, self.render, self.prompt]
 
 
-class Boolean(object):
+class Boolean:
     """To allow a separate t/f that won't hash as 1/0. Don't call directly,
     instead use true and false as singleton objects. Can use with type check.
 
@@ -257,9 +252,6 @@ class Boolean(object):
         self.name = name
 
     def __bool__(self):
-        return self.v
-
-    def __nonzero__(self):
         return self.v
 
     def __repr__(self):

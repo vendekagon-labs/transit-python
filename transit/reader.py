@@ -13,13 +13,14 @@
 ## limitations under the License.
 
 import json
+
 import msgpack
-from collections import OrderedDict
+
 from transit import sosjson
 from transit.decoder import Decoder
 
 
-class Reader(object):
+class Reader:
     """The top-level object for reading in Transit data and converting it to
     Python objects.  During initialization, you must specify the protocol used
     for unmarshalling the data- json or msgpack.
@@ -49,17 +50,21 @@ class Reader(object):
         self.reader.decoder.register(key_or_tag, f_val)
 
     def readeach(self, stream, **kwargs):
-        """Temporary hook for API while streaming reads are in experimental
-        phase. Read each object from stream as available with generator.
-        JSON blocks indefinitely waiting on JSON entities to arrive. MsgPack
-        requires unpacker property to be fed stream using unpacker.feed()
-        method.
+        """Read each object from stream as it becomes available, as a
+        generator. Stops at the end of the stream.
+
+        Data is read from stream as it arrives rather than waiting for a full
+        buffer, so this works over pipes and sockets. For text streams wrapping
+        a binary buffer (like sys.stdin), the underlying buffer is read.
+
+        For msgpack, stream may be None, in which case the objects are taken
+        from data fed to the `unpacker` property with `unpacker.feed()`.
         """
         for o in self.reader.loadeach(stream):
             yield o
 
 
-class JsonUnmarshaler(object):
+class JsonUnmarshaler:
     """The top-level Unmarshaler used by the Reader for JSON payloads.  While
     you may use this directly, it is strongly discouraged.
     """
@@ -67,26 +72,30 @@ class JsonUnmarshaler(object):
         self.decoder = Decoder()
 
     def load(self, stream):
-        return self.decoder.decode(json.load(stream,
-                                             object_pairs_hook=OrderedDict))
+        return self.decoder.decode(json.load(stream))
 
     def loadeach(self, stream):
-        for o in sosjson.items(stream, object_pairs_hook=OrderedDict):
+        for o in sosjson.items(stream):
             yield self.decoder.decode(o)
 
 
-class MsgPackUnmarshaler(object):
+class MsgPackUnmarshaler:
     """The top-level Unmarshaler used by the Reader for MsgPack payloads.
     While you may use this directly, it is strongly discouraged.
     """
     def __init__(self):
         self.decoder = Decoder()
-        self.unpacker = msgpack.Unpacker(object_pairs_hook=OrderedDict)
+        self.unpacker = msgpack.Unpacker(strict_map_key=False)
 
     def load(self, stream):
-        return self.decoder.decode(msgpack.load(stream,
-                                                object_pairs_hook=OrderedDict))
+        return self.decoder.decode(msgpack.unpack(stream, strict_map_key=False))
 
     def loadeach(self, stream):
         for o in self.unpacker:
             yield self.decoder.decode(o)
+        if stream is None:
+            return
+        for data in sosjson.chunks_raw(stream):
+            self.unpacker.feed(data)
+            for o in self.unpacker:
+                yield self.decoder.decode(o)

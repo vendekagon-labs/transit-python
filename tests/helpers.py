@@ -12,10 +12,10 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 
-import transit
-from transit.transit_types import Symbol, Keyword, frozendict
-from transit.helpers import cycle, take, pairs
-from transit.pyversion import izip
+import os
+
+from transit.transit_types import Keyword, frozendict
+from transit.helpers import cycle, take
 
 def ints_centered_on(m, n=5):
     return tuple(range(m - n, m + n + 1))
@@ -30,4 +30,12 @@ def array_of_symbools(m, n=None):
 
 
 def hash_of_size(n):
-    return frozendict(izip(array_of_symbools(n), range(0, n+1)))
+    return frozendict(zip(array_of_symbools(n), range(0, n+1)))
+
+
+def exemplar_path(name):
+    """Path to a transit-format exemplar file. transit-format is expected to be
+    checked out next to this repo, or at $TRANSIT_FORMAT_DIR."""
+    root = os.environ.get("TRANSIT_FORMAT_DIR") or os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir, "transit-format")
+    return os.path.join(root, "examples", "0.8", "simple", name)

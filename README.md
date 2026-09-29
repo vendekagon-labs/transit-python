@@ -24,10 +24,9 @@ The [PYPI](https://pypi.python.org/pypi) package is
 
  * Latest stable release: [0.8](https://pypi.python.org/pypi/transit-python)
 
-You can install with any of the following:
+You can install with:
 
- * `easy_install transit-python`
- * `pip install --use-wheel --pre transit-python`
+ * `pip install transit-python`
 
 You can uninstall with:
 
@@ -54,7 +53,7 @@ For example:
 ```
 >>> from transit.writer import Writer
 >>> from transit.reader import Reader
->>> from StringIO import StringIO
+>>> from io import StringIO
 >>> io = StringIO()
 >>> writer = Writer(io, "json")
 >>> writer.write(["abc", 1234567890])
@@ -64,10 +63,20 @@ For example:
 ```
 
 
+To read a sequence of values as they arrive (e.g. from a pipe or socket),
+use `readeach`, which yields each value as soon as it has been read and stops
+at the end of the stream. A `Writer` can likewise write any number of values.
+
+```python
+reader = Reader("json")
+for value in reader.readeach(sys.stdin.buffer):
+    writer.write(value)
+```
+
+
 ## Supported Python versions
 
- * 2.7.X
- * 3.5.X
+ * 3.10 and later
 
 
 ## Type Mapping
@@ -77,13 +86,10 @@ For example:
 The [transit spec](https://github.com/cognitect/transit-format)
 defines several semantic types that map to more general types in Python:
 
-* typed arrays (ints, longs, doubles, floats, bools) map to Python Tuples
 * lists map to Python Tuples
-* chars map to Strings/Unicode
-
-When the reader encounters an of these (e.g. <code>{"ints" =>
-[1,2,3]}</code>) it delivers just the appropriate object to the app
-(e.g. <code>(1,2,3)</code>).
+* typed arrays (ints, longs, doubles, floats, bools), chars and bytes are
+  read as TaggedValues (e.g. `TaggedValue("ints", (1, 2, 3))`), so they
+  are written back out unchanged
 
 Use a TaggedValue to write these out if it will benefit a consuming
 app e.g.:
@@ -118,7 +124,7 @@ To counter this problem, the latest version of Transit Python introduces a
 Boolean type with singleton (by convention of use) instances of "true" and
 "false." A Boolean can be converted to a native Python bool with bool(x) where
 x is the "true" or "false" instance. Logical evaluation works correctly with
-Booleans (that is, they override the __nonzero__ method and correctly evaluate
+Booleans (that is, they override the __bool__ method and correctly evaluate
 as true and false in simple logical evaluation), but uses of a Boolean as an
 integer will fail.
 
@@ -127,30 +133,24 @@ integer will fail.
 |Transit type|Write accepts|Read returns|
 |------------|-------------|------------|
 |null|None|None|
-|string|unicode, str|unicode|
-|boolean|bool|bool|
+|string|str|str|
+|boolean|bool, transit\_types.Boolean|transit\_types.true, transit\_types.false|
 |integer|int|int|
 |decimal|float|float|
 |keyword|transit\_types.Keyword|transit\_types.Keyword|
 |symbol|transit\_types.Symbol|transit\_types.Symbol|
-|big decimal|float|float|
-|big integer|long|long|
-|time|long, int, datetime|datetime|
+|big decimal|decimal.Decimal|decimal.Decimal|
+|big integer|int|int|
+|time|datetime (timezone aware)|datetime (UTC)|
 |uri|transit\_types.URI|transit\_types.URI|
 |uuid|uuid.UUID|uuid.UUID|
-|char|transit\_types.TaggedValue|unicode|
+|char|transit\_types.TaggedValue|transit\_types.TaggedValue|
 |array|list, tuple|tuple|
-|list|list, tuple|tuple|
-|set|set|set|
-|map|dict|dict|
-|bytes|transit\_types.TaggedValue|tuple|
-|shorts|transit\_types.TaggedValue|tuple|
-|ints|transit\_types.TaggedValue|tuple|
-|longs|transit\_types.TaggedValue|tuple|
-|floats|transit\_types.TaggedValue|tuple|
-|doubles|transit\_types.TaggedValue|tuple|
-|chars|transit\_types.TaggedValue|tuple|
-|bools|transit\_types.TaggedValue|tuple|
+|list|transit\_types.TaggedValue|tuple|
+|set|set, frozenset|frozenset|
+|map|dict, transit\_types.frozendict|transit\_types.frozendict|
+|bytes|transit\_types.TaggedValue|transit\_types.TaggedValue|
+|shorts, ints, longs, floats, doubles, chars, bools|transit\_types.TaggedValue|transit\_types.TaggedValue|
 |link|transit\_types.Link|transit\_types.Link|
 
 
@@ -158,36 +158,47 @@ integer will fail.
 
 ### Setup
 
-Transit Python requires [Transit](http://github.com/cognitect/transit-format) to be at the same directory level as
-transit-python for access to the exemplar files. You will also need
-to add transit-python to your PYTHONPATH.
+The tests read the exemplar files from
+[transit-format](http://github.com/cognitect/transit-format), which is
+expected to be checked out next to transit-python (or set
+`TRANSIT_FORMAT_DIR` to its location).
 
 ```sh
-export PYTHONPATH=$(pwd)
+pip install -e '.[test]'
 ```
 
-Tests should be run from the transit-python directory.
+### Running the tests
+
+```sh
+pytest
+```
+
+### Running the transit-format verify harness
+
+transit-format's `bin/verify` drives `bin/roundtrip`, which runs with the
+`python3` on your `PATH`, so activate an environment with transit-python's
+dependencies installed first.
+
+```sh
+cd ../transit-format
+bin/verify -impls python
+```
 
 ### Benchmarks
 
 ```sh
-python tests/seattle_benchmark.py
-```
-
-### Running the examples
-
-```sh
-python tests/exemplars_test.py
+python -m tests.seattle_benchmark
 ```
 
 ### Build
 
 ```sh
-pip install -e .
+pip wheel --no-deps .
 ```
 
-The version number is automatically incremented based on the number of commits.
-The command below shows what version number will be applied.
+The version number is based on the number of commits; `bin/make-release`
+stamps it into `transit/__init__.py`. The command below shows what version
+number will be applied.
 
 ```sh
 bin/revision

@@ -20,10 +20,9 @@ from transit.writer import Writer
 from transit.transit_types import Keyword, Symbol, URI, frozendict, TaggedValue, Link, true, false
 from io import StringIO, BytesIO
 from transit.helpers import mapcat
-from helpers import ints_centered_on, hash_of_size, array_of_symbools
+from tests.helpers import ints_centered_on, hash_of_size, array_of_symbools, exemplar_path
 from uuid import UUID
-from datetime import datetime
-import dateutil.tz
+from datetime import datetime, timedelta, timezone
 from math import isnan
 
 class ExemplarBaseTest(unittest.TestCase):
@@ -33,17 +32,17 @@ def exemplar(name, val):
     class ExemplarTest(ExemplarBaseTest):
 
         def test_json(self):
-            with open("../transit-format/examples/0.8/simple/" + name + ".json") as stream:
+            with open(exemplar_path(name + ".json")) as stream:
                 data = Reader(protocol="json").read(stream)
                 self.assertEqual(val, data)
 
         def test_msgpack(self):
-            with open("../transit-format/examples/0.8/simple/" + name + ".mp", 'rb') as stream:
+            with open(exemplar_path(name + ".mp"), 'rb') as stream:
                 data = Reader(protocol="msgpack").read(stream)
                 self.assertEqual(val, data)
 
         def test_json_verbose(self):
-            with open("../transit-format/examples/0.8/simple/" + name + ".verbose.json") as stream:
+            with open(exemplar_path(name + ".verbose.json")) as stream:
                 data = Reader(protocol="json_verbose").read(stream)
                 self.assertEqual(val, data)
 
@@ -114,13 +113,14 @@ UUIDS = (UUID('5a2cbea3-e8c6-428b-b525-21239370dd55'),
 
 
 URIS = (
-  URI(u'http://example.com'),
-  URI(u'ftp://example.com'),
-  URI(u'file:///path/to/file.txt'),
-  URI(u'http://www.詹姆斯.com/'))
+  URI('http://example.com'),
+  URI('ftp://example.com'),
+  URI('file:///path/to/file.txt'),
+  URI('http://www.詹姆斯.com/'))
 
-DATES = tuple(map(lambda x: datetime.fromtimestamp(x/1000.0, tz=dateutil.tz.tzutc()),
-                  [-6106017600000, 0, 946728000000, 1396909037000]))
+EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+DATES = tuple(EPOCH + timedelta(milliseconds=x)
+              for x in [-6106017600000, 0, 946728000000, 1396909037000])
 
 SET_SIMPLE = frozenset(ARRAY_SIMPLE)
 SET_MIXED = frozenset(ARRAY_MIXED)
@@ -131,13 +131,11 @@ MAP_SIMPLE = frozendict({Keyword("a"): 1,
                          Keyword("c"): 3})
 
 MAP_MIXED = frozendict({Keyword("a"): 1,
-                        Keyword("b"): u"a string",
+                        Keyword("b"): "a string",
                         Keyword("c"): true})
 
 MAP_NESTED = frozendict({Keyword("simple"): MAP_SIMPLE,
                          Keyword("mixed"): MAP_MIXED})
-
-exemplar("uris", URIS)
 
 exemplar("nil", None)
 exemplar("true", true)
@@ -147,7 +145,7 @@ exemplar("one", 1)
 exemplar("one_string", "hello")
 exemplar("one_keyword", Keyword("hello"))
 exemplar("one_symbol", Symbol("hello"))
-exemplar("one_date", datetime.fromtimestamp(946728000000/1000.0, dateutil.tz.tzutc()))
+exemplar("one_date", EPOCH + timedelta(milliseconds=946728000000))
 exemplar("vector_simple", ARRAY_SIMPLE)
 exemplar("vector_empty", ())
 exemplar("vector_mixed", ARRAY_MIXED)
@@ -217,6 +215,20 @@ exemplar("maps_three_char_string_keys", ({"aaa": 1, "bbb": 2},
 exemplar("maps_four_char_string_keys", ({"aaaa": 1, "bbbb": 2},
                                         {"aaaa": 3, "bbbb": 4},
                                         {"aaaa": 5, "bbbb": 6}))
+
+def keyword_key_maps(k1, k2):
+    return tuple({Keyword(k1): a, Keyword(k2): b} for a, b in ((1, 2), (3, 4), (5, 6)))
+
+exemplar("maps_two_char_keyword_keys", keyword_key_maps("aa", "bb"))
+exemplar("maps_three_char_keyword_keys", keyword_key_maps("aaa", "bbb"))
+exemplar("maps_four_char_keyword_keys", keyword_key_maps("aaaa", "bbbb"))
+
+exemplar("cmap_null_key", frozendict({None: "null as map key",
+                                      (1, 2): "Array as key to force cmap"}))
+exemplar("cmap_pathological",
+         ({Keyword("any-value"): frozendict({("this vector makes this a cmap",): "any value",
+                                             "any string": Keyword("victim")})},
+          {Keyword("victim"): Keyword("any-other-value")}))
 
 exemplar("maps_unrecognized_keys", (TaggedValue("abcde", Keyword("anything")),
                                     TaggedValue("fghij", Keyword("anything-else")),))

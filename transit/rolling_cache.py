@@ -21,7 +21,7 @@ MIN_SIZE_CACHEABLE = 4
 
 
 def is_cache_key(name):
-    return len(name) and (name[0] == SUB and name != MAP_AS_ARR)
+    return len(name) > 0 and name[0] == SUB and name != MAP_AS_ARR
 
 
 def encode_key(i):
@@ -41,52 +41,63 @@ def decode_key(s):
 
 
 def is_cacheable(string, as_map_key=False):
-    return string and len(string) >= MIN_SIZE_CACHEABLE \
-                  and (as_map_key \
-                  or (string[:2] in ["~#", "~$", "~:"]))
+    return len(string) >= MIN_SIZE_CACHEABLE \
+        and (as_map_key or string[:2] in ("~#", "~$", "~:"))
 
 
-class RollingCache(object):
+class RollingCache:
     """This is the internal cache used by python-transit for cacheing and
     expanding map keys during writing and reading.  The cache enables transit
     to minimize the amount of duplicate data sent over the wire, effectively
     compressing down the overall payload size.  The cache is not intended to
     be used directly.
+
+    Readers and writers must agree on cache codes, so this follows the
+    transit spec (and transit-java): codes are assigned in order from "^0",
+    and once CACHE_SIZE entries are in use the cache starts over from "^0".
     """
     def __init__(self):
         self.key_to_value = {}
         self.value_to_key = {}
+        self.index = 0
 
-    # if index rolls over... (bug)
     def decode(self, name, as_map_key=False):
-        """Always returns the name"""
-        if is_cache_key(name) and (name in self.key_to_value):
-            return self.key_to_value[name]
-        return self.encache(name) if is_cacheable(name, as_map_key) else name
+        """Reading: expand a cache code, or remember a cacheable value.
+        Always returns the (uncached) name.
+        """
+        if is_cache_key(name):
+            try:
+                return self.key_to_value[name]
+            except KeyError:
+                raise ValueError("Unknown cache code: " + name) from None
+        if is_cacheable(name, as_map_key):
+            self.encache(name)
+        return name
 
     def encode(self, name, as_map_key=False):
-        """Returns the name the first time and the key after that"""
-        if name in self.key_to_value:
-            return self.key_to_value[name]
-        return self.encache(name) if is_cacheable(name, as_map_key) else name
+        """Writing: returns the name the first time and the code after that."""
+        if name in self.value_to_key:
+            return self.value_to_key[name]
+        if is_cacheable(name, as_map_key):
+            self.encache(name)
+        return name
 
     def size(self):
         return len(self.key_to_value)
 
     def is_cache_full(self):
-        return len(self.key_to_value) > CACHE_SIZE
+        return self.index >= CACHE_SIZE
 
     def encache(self, name):
         if self.is_cache_full():
             self.clear()
-        elif name in self.value_to_key:
-            return self.value_to_key[name]
-
-        key = encode_key(len(self.key_to_value))
+        key = encode_key(self.index)
+        self.index += 1
         self.key_to_value[key] = name
         self.value_to_key[name] = key
-
         return name
 
     def clear(self):
+        self.key_to_value = {}
         self.value_to_key = {}
+        self.index = 0

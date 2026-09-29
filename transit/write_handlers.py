@@ -12,15 +12,14 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 
-import uuid
 import datetime
 import struct
-from transit import pyversion
+import uuid
+from decimal import Decimal
+from math import isnan
+
 from transit.class_hash import ClassDict
 from transit.transit_types import Keyword, Symbol, URI, frozendict, TaggedValue, Link, Boolean
-from decimal import Decimal
-from dateutil import tz
-from math import isnan
 
 MAX_INT = 2**63 - 1
 MIN_INT = -2**63
@@ -29,7 +28,7 @@ MIN_INT = -2**63
 ## writing Transit data.  These object must all be immutable and pickleable.
 
 
-class TaggedMap(object):
+class TaggedMap:
     def __init__(self, tag, rep, str):
         self._tag = tag
         self._rep = rep
@@ -45,7 +44,7 @@ class TaggedMap(object):
         return self._str
 
 
-class NoneHandler(object):
+class NoneHandler:
     @staticmethod
     def tag(_):
         return '_'
@@ -59,21 +58,23 @@ class NoneHandler(object):
         return None
 
 
-class IntHandler(object):
+class IntHandler:
     @staticmethod
-    def tag(i):
-        return 'i'
-
-    @staticmethod
-    def rep(i):
-        return i
+    def tag(n):
+        if MIN_INT <= n <= MAX_INT:
+            return "i"
+        return "n"
 
     @staticmethod
-    def string_rep(i):
-        return str(i)
+    def rep(n):
+        return n
+
+    @staticmethod
+    def string_rep(n):
+        return str(n)
 
 
-class BigIntHandler(object):
+class BigIntHandler:
     @staticmethod
     def tag(_):
         return "n"
@@ -86,23 +87,8 @@ class BigIntHandler(object):
     def string_rep(n):
         return str(n)
 
-class Python3IntHandler(object):
-    @staticmethod
-    def tag(n):
-        if n < MAX_INT and n > MIN_INT:
-          return "i"
-        return "n"
 
-    @staticmethod
-    def rep(n):
-        return n
-
-    @staticmethod
-    def string_rep(n):
-        return str(n)
-
-
-class BigDecimalHandler(object):
+class BigDecimalHandler:
     @staticmethod
     def tag(_):
         return "f"
@@ -116,7 +102,7 @@ class BigDecimalHandler(object):
         return str(n)
 
 
-class FloatHandler(object):
+class FloatHandler:
     @staticmethod
     def tag(f):
         return "z" if isnan(f) or f in (float('Inf'), float('-Inf')) else "d"
@@ -136,7 +122,7 @@ class FloatHandler(object):
         return str(f)
 
 
-class StringHandler(object):
+class StringHandler:
     @staticmethod
     def tag(s):
         return 's'
@@ -150,7 +136,7 @@ class StringHandler(object):
         return s
 
 
-class BooleanHandler(object):
+class BooleanHandler:
     @staticmethod
     def tag(_):
         return '?'
@@ -164,7 +150,7 @@ class BooleanHandler(object):
         return 't' if b else 'f'
 
 
-class ArrayHandler(object):
+class ArrayHandler:
     @staticmethod
     def tag(a):
         return 'array'
@@ -178,7 +164,7 @@ class ArrayHandler(object):
         return None
 
 
-class MapHandler(object):
+class MapHandler:
     @staticmethod
     def tag(m):
         return 'map'
@@ -192,7 +178,7 @@ class MapHandler(object):
         return None
 
 
-class KeywordHandler(object):
+class KeywordHandler:
     @staticmethod
     def tag(k):
         return ':'
@@ -206,7 +192,7 @@ class KeywordHandler(object):
         return str(k)
 
 
-class SymbolHandler(object):
+class SymbolHandler:
     @staticmethod
     def tag(s):
         return '$'
@@ -220,7 +206,7 @@ class SymbolHandler(object):
         return str(s)
 
 
-class UuidHandler(object):
+class UuidHandler:
     @staticmethod
     def tag(_):
         return "u"
@@ -234,7 +220,7 @@ class UuidHandler(object):
         return str(u)
 
 
-class UriHandler(object):
+class UriHandler:
     @staticmethod
     def tag(_):
         return "r"
@@ -248,8 +234,8 @@ class UriHandler(object):
         return u.rep
 
 
-class DateTimeHandler(object):
-    epoch = datetime.datetime(1970, 1, 1).replace(tzinfo=tz.tzutc())
+class DateTimeHandler:
+    epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
 
     @staticmethod
     def tag(_):
@@ -257,8 +243,7 @@ class DateTimeHandler(object):
 
     @staticmethod
     def rep(d):
-        td = d - DateTimeHandler.epoch
-        return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 1e3)
+        return (d - DateTimeHandler.epoch) // datetime.timedelta(milliseconds=1)
 
     @staticmethod
     def verbose_handler():
@@ -269,7 +254,7 @@ class DateTimeHandler(object):
         return str(DateTimeHandler.rep(d))
 
 
-class VerboseDateTimeHandler(object):
+class VerboseDateTimeHandler:
     @staticmethod
     def tag(_):
         return "t"
@@ -283,7 +268,7 @@ class VerboseDateTimeHandler(object):
         return d.isoformat()
 
 
-class SetHandler(object):
+class SetHandler:
     @staticmethod
     def tag(_):
         return "set"
@@ -297,7 +282,7 @@ class SetHandler(object):
         return None
 
 
-class TaggedValueHandler(object):
+class TaggedValueHandler:
     @staticmethod
     def tag(tv):
         return tv.tag
@@ -311,7 +296,7 @@ class TaggedValueHandler(object):
         return None
 
 
-class LinkHandler(object):
+class LinkHandler:
     @staticmethod
     def tag(_):
         return "link"
@@ -326,7 +311,7 @@ class LinkHandler(object):
 
 
 class WriteHandler(ClassDict):
-    """This is the master handler for encoding/writing Python data into
+    """This is the top-level handler for encoding/writing Python data into
     Transit data, based on its type.
     The Handler itself is a dispatch map, that resolves on full type/object
     inheritance.
@@ -340,17 +325,9 @@ class WriteHandler(ClassDict):
         self[bool] = BooleanHandler
         self[Boolean] = BooleanHandler
         self[str] = StringHandler
-        self[pyversion.unicode_type] = StringHandler
         self[list] = ArrayHandler
         self[tuple] = ArrayHandler
-        self[dict] = MapHandler
-
-        if pyversion.PY3:
-            self[int] = Python3IntHandler
-        else:
-            self[int] = IntHandler
-            self[long] = BigIntHandler
-
+        self[int] = IntHandler
         self[float] = FloatHandler
         self[Keyword] = KeywordHandler
         self[Symbol] = SymbolHandler

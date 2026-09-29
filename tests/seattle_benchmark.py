@@ -13,17 +13,19 @@
 ## limitations under the License.
 
 from transit.reader import JsonUnmarshaler
-from transit.pyversion import unicode_type
 import json
 import time
 from io import StringIO
+import os
+
+from tests.helpers import exemplar_path
 
 def run_tests(data):
-    datas = StringIO(unicode_type(data))
+    datas = StringIO(data)
     t = time.time()
     JsonUnmarshaler().load(datas)
     et = time.time()
-    datas = StringIO(unicode_type(data))
+    datas = StringIO(data)
     tt = time.time()
     json.load(datas)
     ett = time.time()
@@ -32,7 +34,7 @@ def run_tests(data):
     return read_delta
 
 
-seattle_dir = "../transit-format/examples/0.8/"
+seattle_dir = os.path.dirname(exemplar_path("")) + "/../"
 means = {}
 for jsonfile in [seattle_dir + "example.json", 
                  seattle_dir + "example.verbose.json"]:
@@ -44,7 +46,7 @@ for jsonfile in [seattle_dir + "example.json",
     print("Running " + jsonfile)
     print("-"*50)
 
-    runs = 200
+    runs = int(os.environ.get("RUNS", 200))
     deltas = [run_tests(data) for x in range(runs)]
     means[jsonfile] = sum(deltas)/runs
 

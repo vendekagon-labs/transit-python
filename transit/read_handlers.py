@@ -12,145 +12,162 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 
-from transit import pyversion, transit_types
-import uuid
-import ctypes
-import dateutil.parser
 import datetime
-import dateutil.tz
-from transit.helpers import pairs
+import re
+import uuid
 from decimal import Decimal
+
+from transit import transit_types
+from transit.helpers import pairs
 
 ## Read handlers are used by the decoder when parsing/reading in Transit
 ## data and returning Python objects
 
+EPOCH = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
 
-class DefaultHandler(object):
+_RFC3339 = re.compile(r"(\d{4}-\d\d-\d\d)[Tt ](\d\d:\d\d:\d\d)(?:\.(\d+))?"
+                      r"([Zz]|[+-]\d\d:\d\d)?$")
+
+
+def parse_rfc3339(s):
+    """Parse an RFC 3339 timestamp into an aware datetime.
+
+    Normalizes what datetime.fromisoformat can't handle on every supported
+    Python ("Z", fractional seconds that aren't 3 or 6 digits). A missing
+    offset is taken to be UTC, since transit dates are points in time.
+    """
+    m = _RFC3339.match(s)
+    if not m:
+        d = datetime.datetime.fromisoformat(s)
+    else:
+        date, time, frac, offset = m.groups()
+        if frac:
+            time += "." + frac[:6].ljust(6, "0")
+        if offset is None or offset in "Zz":
+            offset = "+00:00"
+        d = datetime.datetime.fromisoformat(date + "T" + time + offset)
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=datetime.timezone.utc)
+    return d
+
+
+class DefaultHandler:
     @staticmethod
     def from_rep(t, v):
         return transit_types.TaggedValue(t, v)
 
 
-class NoneHandler(object):
+class NoneHandler:
     @staticmethod
     def from_rep(_):
         return None
 
 
-class KeywordHandler(object):
+class KeywordHandler:
     @staticmethod
     def from_rep(v):
         return transit_types.Keyword(v)
 
 
-class SymbolHandler(object):
+class SymbolHandler:
     @staticmethod
     def from_rep(v):
         return transit_types.Symbol(v)
 
 
-class BigDecimalHandler(object):
+class BigDecimalHandler:
     @staticmethod
     def from_rep(v):
         return Decimal(v)
 
 
-class BooleanHandler(object):
+class BooleanHandler:
     @staticmethod
     def from_rep(x):
         return transit_types.true if x == "t" else transit_types.false
 
 
-class IntHandler(object):
+class IntHandler:
     @staticmethod
     def from_rep(v):
         return int(v)
 
 
-class FloatHandler(object):
+class FloatHandler:
     @staticmethod
     def from_rep(v):
         return float(v)
 
 
-class UuidHandler(object):
+class UuidHandler:
     @staticmethod
     def from_rep(u):
-        """Given a string, return a UUID object."""
-        if isinstance(u, pyversion.string_types):
+        """Given a string, or a pair of signed 64 bit ints (most significant
+        first), return a UUID object."""
+        if isinstance(u, str):
             return uuid.UUID(u)
-
-        # hack to remove signs
-        a = ctypes.c_ulong(u[0])
-        b = ctypes.c_ulong(u[1])
-        combined = a.value << 64 | b.value
-        return uuid.UUID(int=combined)
+        mask = (1 << 64) - 1
+        return uuid.UUID(int=(u[0] & mask) << 64 | (u[1] & mask))
 
 
-class UriHandler(object):
+class UriHandler:
     @staticmethod
     def from_rep(u):
         return transit_types.URI(u)
 
 
-class DateHandler(object):
+class DateHandler:
     @staticmethod
     def from_rep(d):
-        if isinstance(d, pyversion.int_types):
+        if isinstance(d, int):
             return DateHandler._convert_timestamp(d)
         if "T" in d:
-            return dateutil.parser.parse(d)
-        return DateHandler._convert_timestamp(pyversion.long_type(d))
+            return parse_rfc3339(d)
+        return DateHandler._convert_timestamp(int(d))
 
     @staticmethod
     def _convert_timestamp(ms):
         """Given a timestamp in ms, return a DateTime object."""
-        return datetime.datetime.fromtimestamp(ms/1000.0, dateutil.tz.tzutc())
+        return EPOCH + datetime.timedelta(milliseconds=ms)
 
 
-if pyversion.PY3:
-    class BigIntegerHandler(object):
-        @staticmethod
-        def from_rep(d):
-            return int(d)
-else:
-    class BigIntegerHandler(object):
-        @staticmethod
-        def from_rep(d):
-            return long(d)
+class BigIntegerHandler:
+    @staticmethod
+    def from_rep(d):
+        return int(d)
 
 
-class LinkHandler(object):
+class LinkHandler:
     @staticmethod
     def from_rep(l):
         return transit_types.Link(**l)
 
 
-class ListHandler(object):
+class ListHandler:
     @staticmethod
     def from_rep(l):
         return l
 
 
-class SetHandler(object):
+class SetHandler:
     @staticmethod
     def from_rep(s):
         return frozenset(s)
 
 
-class CmapHandler(object):
+class CmapHandler:
     @staticmethod
     def from_rep(cmap):
         return transit_types.frozendict(pairs(cmap))
 
 
-class IdentityHandler(object):
+class IdentityHandler:
     @staticmethod
     def from_rep(i):
         return i
 
 
-class SpecialNumbersHandler(object):
+class SpecialNumbersHandler:
     @staticmethod
     def from_rep(z):
         if z == 'NaN':

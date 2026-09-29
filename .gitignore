@@ -5,3 +5,5 @@ dist/
 build/*
 !build/release
 *.egg*
+__pycache__/
+.pytest_cache/

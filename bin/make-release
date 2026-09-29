@@ -1,2 +1,6 @@
 #!/bin/bash
-m4 -DREVISION=`bin/revision` setup.py.m4 > setup.py
+# Stamp the release version (0.8.<revision>) into the package.
+set -e
+cd `dirname $0`/..
+sed -i.bak "s/^__version__ = .*/__version__ = \"0.8.`bin/revision`\"/" transit/__init__.py
+rm transit/__init__.py.bak

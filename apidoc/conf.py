@@ -42,12 +42,12 @@ source_suffix = '.rst'
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
 
-# The master toctree document.
-master_doc = 'index'
+# The root toctree document.
+root_doc = 'index'
 
 # General information about the project.
-project = u'transit'
-copyright = u'2014, Cognitect'
+project = 'transit'
+copyright = '2014, Cognitect'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -199,8 +199,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'transit-python.tex', u'transit-python Documentation',
-   u'Cognitect', 'manual'),
+  ('index', 'transit-python.tex', 'transit-python Documentation',
+   'Cognitect', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -229,8 +229,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'transit-python', u'transit-python Documentation',
-     [u'Cognitect'], 1)
+    ('index', 'transit-python', 'transit-python Documentation',
+     ['Cognitect'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -243,8 +243,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'transit-python', u'transit-python Documentation',
-   u'Cognitect', 'transit-python', 'Transit format marshalling for Python',
+  ('index', 'transit-python', 'transit-python Documentation',
+   'Cognitect', 'transit-python', 'Transit format marshalling for Python',
    'Miscellaneous'),
 ]
 
@@ -264,13 +264,13 @@ texinfo_documents = [
 # -- Options for Epub output ----------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'transit-python'
-epub_author = u'Cognitect'
-epub_publisher = u'Cognitect'
-epub_copyright = u'2014, Cognitect'
+epub_title = 'transit-python'
+epub_author = 'Cognitect'
+epub_publisher = 'Cognitect'
+epub_copyright = '2014, Cognitect'
 
 # The basename for the epub file. It defaults to the project name.
-#epub_basename = u'transit'
+#epub_basename = 'transit'
 
 # The HTML theme for the epub output. Since the default themes are not optimized
 # for small screen space, using the same theme for HTML and epub output is

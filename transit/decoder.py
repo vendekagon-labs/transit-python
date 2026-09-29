@@ -12,16 +12,15 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 
-from collections import OrderedDict
-from transit import pyversion, transit_types
+from transit import transit_types
 from transit import read_handlers as rh
 from transit.constants import MAP_AS_ARR, ESC, SUB, RES
 from transit.helpers import pairs
-from transit.rolling_cache import RollingCache, is_cacheable, is_cache_key
+from transit.rolling_cache import RollingCache
 from transit.transit_types import true, false
 
 
-class Tag(object):
+class Tag:
     def __init__(self, tag):
         self.tag = tag
 
@@ -51,7 +50,7 @@ ground_decoders = {"_": rh.NoneHandler,
                    "'": rh.IdentityHandler}
 
 
-class Decoder(object):
+class Decoder:
     """The Decoder is the lowest level entry point for parsing, decoding, and
     fully converting Transit data into Python objects.
 
@@ -62,11 +61,13 @@ class Decoder(object):
     known as Ground Decoders, and are needed to maintain bottom-tier
     compatibility.
     """
-    def __init__(self, options={}):
+    def __init__(self, options=None):
         self.options = default_options.copy()
-        self.options.update(options)
+        self.options.update(options or {})
 
-        self.decoders = self.options["decoders"]
+        # Copy so that registering decoders on one Decoder doesn't leak into
+        # default_options (and so every other Decoder).
+        self.decoders = dict(self.options["decoders"])
         # Always ensure we control the ground decoders
         self.decoders.update(ground_decoders)
 
@@ -82,18 +83,15 @@ class Decoder(object):
         return self._decode(node, cache, as_map_key)
 
     def _decode(self, node, cache, as_map_key):
-        tp = type(node)
-        if tp is pyversion.unicode_type:
+        if isinstance(node, str):
             return self.decode_string(node, cache, as_map_key)
-        elif tp is bytes:
+        elif isinstance(node, bytes):
             return self.decode_string(node.decode("utf-8"), cache, as_map_key)
-        elif tp is dict or tp is OrderedDict:
+        elif isinstance(node, dict):
             return self.decode_hash(node, cache, as_map_key)
-        elif tp is list:
+        elif isinstance(node, list):
             return self.decode_list(node, cache, as_map_key)
-        elif tp is str:
-            return self.decode_string(unicode(node, "utf-8"), cache, as_map_key)
-        elif tp is bool:
+        elif isinstance(node, bool):
             return true if node else false
         return node
 
@@ -114,22 +112,22 @@ class Decoder(object):
                     returned_dict[key] = val
                 return transit_types.frozendict(returned_dict)
 
+            # Each element must be decoded exactly once, in order, to keep
+            # the cache in step with the writer.
             decoded = self._decode(node[0], cache, as_map_key)
             if isinstance(decoded, Tag):
                 return self.decode_tag(decoded.tag,
                                        self._decode(node[1], cache, as_map_key))
-        return tuple(self._decode(x, cache, as_map_key) for x in node)
+            return (decoded,) + tuple(self._decode(x, cache, as_map_key)
+                                      for x in node[1:])
+        return ()
 
     def decode_string(self, string, cache, as_map_key):
         """Decode a string - arguments follow the same convention as the
         top-level 'decode' function.
         """
-        if is_cache_key(string):
-            return self.parse_string(cache.decode(string, as_map_key),
-                                     cache, as_map_key)
-        if is_cacheable(string, as_map_key):
-            cache.encode(string, as_map_key)
-        return self.parse_string(string, cache, as_map_key)
+        return self.parse_string(cache.decode(string, as_map_key),
+                                 cache, as_map_key)
 
     def decode_tag(self, tag, rep):
         decoder = self.decoders.get(tag, None)
