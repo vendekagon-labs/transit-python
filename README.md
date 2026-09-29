@@ -19,15 +19,21 @@ _NOTE: Transit is intended primarily as a wire protocol for transferring data be
 
 ## Releases and Dependency Information
 
-The [PYPI](https://pypi.python.org/pypi) package is
-[`transit-python`](https://pypi.python.org/pypi/transit-python)
+This version is installed from GitHub (the
+[`transit-python`](https://pypi.org/project/transit-python/) package on PyPI is
+the original Cognitect release, which supports Python 2.7 and 3.5):
 
- * Latest stable release: [0.8](https://pypi.python.org/pypi/transit-python)
+```sh
+# JSON and JSON-verbose
+pip install "transit-python @ git+https://github.com/vendekagon-labs/transit-python.git"
 
-You can install with:
+# also msgpack
+pip install "transit-python[msgpack] @ git+https://github.com/vendekagon-labs/transit-python.git"
+```
 
- * `pip install transit-python` for the JSON and JSON-verbose protocols
- * `pip install 'transit-python[msgpack]'` to also use the msgpack protocol
+To install over SSH, use `git+ssh://git@github.com/vendekagon-labs/transit-python.git`;
+to pin a version, add `@<tag or commit>` to the URL. In a `pyproject.toml` or
+`requirements.txt`, use the same `transit-python @ git+https://...` form.
 
 msgpack support depends on the [msgpack](https://pypi.org/project/msgpack/)
 package, which is only installed with the `msgpack` extra. Without it,
