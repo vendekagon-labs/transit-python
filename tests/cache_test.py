@@ -20,12 +20,11 @@ import json
 import unittest
 from io import BytesIO, StringIO
 
-import msgpack
-
 from transit.reader import Reader
 from transit.rolling_cache import CACHE_SIZE, RollingCache, decode_key, encode_key
 from transit.transit_types import Keyword
 from transit.writer import Writer
+from tests.helpers import HAVE_MSGPACK, needs_msgpack
 
 N = CACHE_SIZE + 1
 
@@ -53,10 +52,12 @@ WRAPPING_JSON = json.dumps([BIG,
                             ["^ ", "~:key0000", "~:first"],
                             ["^ ", "^0", "~:last-again"]],
                            separators=(",", ":"))
-WRAPPING_MSGPACK = msgpack.packb([dict(zip(BIG[1::2], BIG[2::2])),
-                                  {"^0": "~:last"},
-                                  {"~:key0000": "~:first"},
-                                  {"^0": "~:last-again"}])
+if HAVE_MSGPACK:
+    import msgpack
+    WRAPPING_MSGPACK = msgpack.packb([dict(zip(BIG[1::2], BIG[2::2])),
+                                      {"^0": "~:last"},
+                                      {"~:key0000": "~:first"},
+                                      {"^0": "~:last-again"}])
 
 
 class CacheCodeTest(unittest.TestCase):
@@ -93,6 +94,7 @@ class CacheWrapInteropTest(unittest.TestCase):
         self.assertEqual(Reader("json").read(StringIO(WRAPPING_JSON)),
                          tuple(wrapping_value()))
 
+    @needs_msgpack
     def test_read_msgpack(self):
         self.assertEqual(Reader("msgpack").read(BytesIO(WRAPPING_MSGPACK)),
                          tuple(wrapping_value()))

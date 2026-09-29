@@ -13,6 +13,7 @@
 ## limitations under the License.
 
 import os
+import unittest
 
 from transit.transit_types import Keyword, frozendict
 from transit.helpers import cycle, take
@@ -39,3 +40,14 @@ def exemplar_path(name):
     root = os.environ.get("TRANSIT_FORMAT_DIR") or os.path.join(
         os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir, "transit-format")
     return os.path.join(root, "examples", "0.8", "simple", name)
+
+
+try:
+    import msgpack  # noqa: F401
+    HAVE_MSGPACK = True
+except ImportError:
+    HAVE_MSGPACK = False
+
+needs_msgpack = unittest.skipUnless(HAVE_MSGPACK, "msgpack is not installed")
+
+PROTOCOLS = ("json", "json_verbose") + (("msgpack",) if HAVE_MSGPACK else ())

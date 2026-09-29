@@ -23,6 +23,7 @@ from transit import sosjson
 from transit.reader import Reader
 from transit.transit_types import Keyword
 from transit.writer import Writer
+from tests.helpers import PROTOCOLS, needs_msgpack
 
 REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
 
@@ -64,6 +65,7 @@ class ReadEachTest(unittest.TestCase):
                 got = list(Reader(protocol).readeach(Trickle(data, n)))
                 self.assertEqual(got, expected(VALUES), (protocol, n))
 
+    @needs_msgpack
     def test_msgpack_chunk_sizes(self):
         data = write_all("msgpack", VALUES)
         for n in (1, 5, len(data)):
@@ -81,6 +83,9 @@ class ReadEachTest(unittest.TestCase):
 
     def test_eof_ends_iteration(self):
         self.assertEqual(list(Reader("json").readeach(StringIO(""))), [])
+
+    @needs_msgpack
+    def test_eof_ends_iteration_msgpack(self):
         self.assertEqual(list(Reader("msgpack").readeach(BytesIO(b""))), [])
 
     def test_truncated_value(self):
@@ -104,7 +109,7 @@ class RoundtripScriptTest(unittest.TestCase):
                                        + os.pathsep + os.environ.get("PATH", ""))).stdout
 
     def test_roundtrip_script(self):
-        for protocol in ("json", "json_verbose", "msgpack"):
+        for protocol in PROTOCOLS:
             data = write_all(protocol, VALUES)
             if protocol != "msgpack":
                 data = data.encode("utf-8")

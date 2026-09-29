@@ -11,7 +11,7 @@ license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Cognitect" }]
 requires-python = ">=3.10"
-dependencies = ["msgpack>=1.0"]
+dependencies = []
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -23,7 +23,8 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest"]
+msgpack = ["msgpack>=1.0"]
+test = ["pytest", "msgpack>=1.0"]
 
 [project.urls]
 Homepage = "https://github.com/cognitect/transit-python"

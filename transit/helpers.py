@@ -28,3 +28,13 @@ cycle = itertools.cycle
 
 def take(n, i):
     return itertools.islice(i, 0, n)
+
+
+def require_msgpack():
+    """Import msgpack, which is only needed for the msgpack protocol."""
+    try:
+        import msgpack
+    except ImportError as e:
+        raise ImportError("The msgpack protocol requires the msgpack package; "
+                          "install it with: pip install 'transit-python[msgpack]'") from e
+    return msgpack

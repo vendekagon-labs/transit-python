@@ -15,18 +15,18 @@
 import json
 import re
 
-import msgpack
-
 from transit.constants import SUB, ESC, RES, MAP_AS_ARR, QUOTE
 from transit.rolling_cache import RollingCache
 from transit.write_handlers import WriteHandler
 from transit.transit_types import TaggedValue
+from transit.helpers import require_msgpack
 
 
 class Writer:
     """The top-level object for writing out Python objects and converting them
     to Transit data.  During initialization, you must specify the protocol used
-    for marshalling the data- json or msgpack.  You must also specify the io
+    for marshalling the data- json or msgpack (which requires the msgpack
+    package: pip install 'transit-python[msgpack]').  You must also specify the io
     source used for writing (a file descriptor).  You may optionally pass in
     an options dictionary that will be forwarded onto the Marshaler.
     The cache is enabled by default.
@@ -251,7 +251,7 @@ class MsgPackMarshaler(Marshaler):
 
     def __init__(self, io, opts=None):
         self.io = io
-        self.packer = msgpack.Packer(autoreset=False)
+        self.packer = require_msgpack().Packer(autoreset=False)
         nopts = MsgPackMarshaler.default_opts.copy()
         nopts.update(opts or {})
         Marshaler.__init__(self, nopts)

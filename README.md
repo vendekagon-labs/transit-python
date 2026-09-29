@@ -26,7 +26,12 @@ The [PYPI](https://pypi.python.org/pypi) package is
 
 You can install with:
 
- * `pip install transit-python`
+ * `pip install transit-python` for the JSON and JSON-verbose protocols
+ * `pip install 'transit-python[msgpack]'` to also use the msgpack protocol
+
+msgpack support depends on the [msgpack](https://pypi.org/project/msgpack/)
+package, which is only installed with the `msgpack` extra. Without it,
+creating a msgpack `Reader` or `Writer` raises an `ImportError` saying so.
 
 You can uninstall with:
 
@@ -166,6 +171,9 @@ expected to be checked out next to transit-python (or set
 ```sh
 pip install -e '.[test]'
 ```
+
+The `test` extra includes msgpack. The msgpack tests are skipped when it
+isn't installed, so run the tests both with and without it.
 
 ### Running the tests
 

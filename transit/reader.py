@@ -14,16 +14,16 @@
 
 import json
 
-import msgpack
-
 from transit import sosjson
 from transit.decoder import Decoder
+from transit.helpers import require_msgpack
 
 
 class Reader:
     """The top-level object for reading in Transit data and converting it to
     Python objects.  During initialization, you must specify the protocol used
-    for unmarshalling the data- json or msgpack.
+    for unmarshalling the data- json or msgpack. The msgpack protocol requires
+    the msgpack package (pip install 'transit-python[msgpack]').
     """
     def __init__(self, protocol="json"):
         if protocol in ("json", "json_verbose"):
@@ -84,11 +84,12 @@ class MsgPackUnmarshaler:
     While you may use this directly, it is strongly discouraged.
     """
     def __init__(self):
+        self.msgpack = require_msgpack()
         self.decoder = Decoder()
-        self.unpacker = msgpack.Unpacker(strict_map_key=False)
+        self.unpacker = self.msgpack.Unpacker(strict_map_key=False)
 
     def load(self, stream):
-        return self.decoder.decode(msgpack.unpack(stream, strict_map_key=False))
+        return self.decoder.decode(self.msgpack.unpack(stream, strict_map_key=False))
 
     def loadeach(self, stream):
         for o in self.unpacker:

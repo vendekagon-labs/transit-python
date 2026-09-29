@@ -20,7 +20,7 @@ from transit.writer import Writer
 from transit.transit_types import Keyword, Symbol, URI, frozendict, TaggedValue, Link, true, false
 from io import StringIO, BytesIO
 from transit.helpers import mapcat
-from tests.helpers import ints_centered_on, hash_of_size, array_of_symbools, exemplar_path
+from tests.helpers import ints_centered_on, hash_of_size, array_of_symbools, exemplar_path, needs_msgpack
 from uuid import UUID
 from datetime import datetime, timedelta, timezone
 from math import isnan
@@ -36,6 +36,7 @@ def exemplar(name, val):
                 data = Reader(protocol="json").read(stream)
                 self.assertEqual(val, data)
 
+        @needs_msgpack
         def test_msgpack(self):
             with open(exemplar_path(name + ".mp"), 'rb') as stream:
                 data = Reader(protocol="msgpack").read(stream)
@@ -46,6 +47,7 @@ def exemplar(name, val):
                 data = Reader(protocol="json_verbose").read(stream)
                 self.assertEqual(val, data)
 
+        @needs_msgpack
         def test_reencode_msgpack(self):
             io = BytesIO()
             writer = Writer(io, protocol="msgpack")

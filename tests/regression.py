@@ -22,6 +22,8 @@ from transit.transit_types import Symbol, frozendict, true, false, Keyword, Name
 from decimal import Decimal
 from io import BytesIO, StringIO
 
+from tests.helpers import PROTOCOLS
+
 class RegressionBaseTest(unittest.TestCase):
     pass
 
@@ -90,7 +92,7 @@ class BooleanTest(unittest.TestCase):
     Boolean values.
     """
     def test_write_bool(self):
-        for protocol in ("json", "json_verbose", "msgpack"):
+        for protocol in PROTOCOLS:
             io = BytesIO() if  protocol == "msgpack" else StringIO()
             w = Writer(io, protocol)
             w.write((True, False))
