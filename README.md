@@ -1,5 +1,3 @@
-# This library is no longer maintained. An unaffiliated fork exists at https://github.com/3wnbr1/transit-python2.
-
 transit-python
 ==============
 
@@ -7,9 +5,14 @@ Transit is a format and set of libraries for conveying values between
 applications written in different programming languages. The library provides
 support for marshalling data to/from Python.
 
+transit-python is maintained by [Vendekagon Labs](https://github.com/vendekagon-labs),
+which has taken it over as the successor to Cognitect's original
+[cognitect/transit-python](https://github.com/cognitect/transit-python),
+bringing it up to date: Python 3.10 and later, all three transit encodings,
+and a native extension for speed. It continues the same PyPI package,
+[`transit-python`](https://pypi.org/project/transit-python/).
+
  * [Rationale](http://blog.cognitect.com/blog/2014/7/22/transit)
- * [API docs](http://cognitect.github.io/transit-python/)
-  * [Mirrored for PyPI](http://pythonhosted.org/transit-python/)
  * [Specification](http://github.com/cognitect/transit-format)
 
 This implementation's major.minor version number corresponds to the
@@ -243,7 +246,11 @@ publishes them to PyPI with trusted publishing.
 
 ## Contributing
 
-This library is open source, developed internally by Cognitect. We welcome discussions of potential problems and enhancement suggestions on the [transit-format mailing list](https://groups.google.com/forum/#!forum/transit-format). Issues can be filed using GitHub [issues](https://github.com/cognitect/transit-python/issues) for this project. Because transit is incorporated into products and client projects, we prefer to do development internally and are not accepting pull requests or patches.
+transit-python is maintained by [Vendekagon Labs](https://github.com/vendekagon-labs).
+Report problems and suggest changes with GitHub
+[issues](https://github.com/vendekagon-labs/transit-python/issues); pull
+requests are welcome too. Changes should keep the tests and transit-format's
+verify harness (`bin/verify`) passing, in both native and pure Python.
 
 ## Copyright and License
 

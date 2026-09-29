@@ -10,6 +10,7 @@ readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Cognitect" }]
+maintainers = [{ name = "Vendekagon Labs LLC" }]
 requires-python = ">=3.10"
 dependencies = []
 classifiers = [
@@ -27,8 +28,10 @@ msgpack = ["msgpack>=1.0"]
 test = ["pytest", "msgpack>=1.0"]
 
 [project.urls]
-Homepage = "https://github.com/cognitect/transit-python"
+Homepage = "https://github.com/vendekagon-labs/transit-python"
+Issues = "https://github.com/vendekagon-labs/transit-python/issues"
 Specification = "https://github.com/cognitect/transit-format"
+Original = "https://github.com/cognitect/transit-python"
 
 [tool.setuptools]
 packages = ["transit"]

@@ -1,3 +1,7 @@
 ## Contributing
 
-This library is open source, developed internally by Cognitect. We welcome discussions of potential problems and enhancement suggestions on the [transit-format mailing list](https://groups.google.com/forum/#!forum/transit-format). Issues can be filed using GitHub [issues](https://github.com/cognitect/transit-python/issues) for this project. Because transit is incorporated into products and client projects, we prefer to do development internally and are not accepting pull requests or patches.
+transit-python is maintained by [Vendekagon Labs](https://github.com/vendekagon-labs).
+Report problems and suggest changes with GitHub
+[issues](https://github.com/vendekagon-labs/transit-python/issues); pull
+requests are welcome too. Changes should keep the tests and transit-format's
+verify harness (`bin/verify`) passing, in both native and pure Python.
